@@ -1,0 +1,69 @@
+# Welcome to Serverless!
+#
+# This file is the main config file for your service.
+# It's very minimal at this point and uses default values.
+# You can always add more config options for more control.
+# We've included some commented out config examples here.
+# Just uncomment any of them to get that config option.
+#
+# For full config options, check the docs:
+#    docs.serverless.com
+#
+# Happy Coding!
+
+service: sls-ebay-scraper
+# app and org for use with dashboard.serverless.com
+#app: your-app-name
+#org: your-org-name
+
+# You can pin your service to only deploy with a specific Serverless version
+# Check out our docs for more details
+frameworkVersion: '2'
+
+provider:
+  name: aws
+  runtime: python3.8
+  logRetentionInDays: 1
+  timeout: 30
+  environment:
+    FEED_BUCKET_NAME: !Ref ScraperFeedBucket
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "s3:PutObject"
+      Resource: !Sub
+        - "arn:aws:s3:::#{BucketName}/*"
+        - BucketName: !Ref ScraperFeedBucket
+
+resources:
+  - AWSTemplateFormatVersion: "2010-09-09"
+    Transform: "AWS::Serverless-2016-10-31"
+  - ${file(./s3-template.yml)}
+
+package:
+  include:
+    - handler.py
+    - launcher.py
+    - ebay_scraper/**
+    - scrapy.cfg
+  exclude:
+    - "./**"
+
+functions:
+  hello:
+    handler: handler.hello
+  lambdaScrape:
+    handler: launcher.scrape
+
+
+
+plugins:
+  - serverless-python-requirements
+  - serverless-cloudformation-sub-variables
+custom:
+  pythonRequirements:
+    slim: true
+    fileName: requirements.txt
+    dockerizePip: non-linux
+    noDeploy: #https://github.com/mirumee/ariadne/issues/144
+      - typing
